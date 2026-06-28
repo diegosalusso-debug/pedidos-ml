@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pedidos ML</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #f5f4f1;
+  --surface: #ffffff;
+  --surface-2: #f0ede8;
+  --border: rgba(0,0,0,0.09);
+  --border-strong: rgba(0,0,0,0.16);
+  --text: #1a1916;
+  --text-2: #6b6860;
+  --text-3: #9e9c97;
+  --radius: 10px;
+  --accent: #1a56db;
+  --accent-bg: #eff4ff;
+  --accent-text: #1e429f;
+  --success: #057a55;
+  --success-bg: #f3faf7;
+  --success-text: #046c4e;
+  --warning: #92400e;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --danger: #9b1c1c;
+  --danger-bg: #fdf2f2;
+  --danger-text: #9b1c1c;
+  --void-bg: #f5f3ff;
+  --void-text: #5521b5;
+  --void-border: #ddd6fe;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#18181b;--surface:#27272a;--surface-2:#3f3f46;
+    --border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.15);
+    --text:#fafafa;--text-2:#a1a1aa;--text-3:#71717a;
+    --accent:#60a5fa;--accent-bg:#1e3a5f;--accent-text:#93c5fd;
+    --success-bg:#052e16;--success-text:#6ee7b7;
+    --warning-bg:#451a03;--warning-text:#fcd34d;
+    --danger-bg:#450a0a;--danger-text:#fca5a5;
+    --void-bg:#2e1065;--void-text:#c4b5fd;--void-border:#4c1d95;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:480px;margin:0 auto;padding-bottom:80px}
+
+/* HEADER */
+.header{padding:1rem 1rem .5rem;position:sticky;top:0;z-index:50;background:var(--bg)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.header-title{font-size:17px;font-weight:600;letter-spacing:-.3px}
+.header-sub{font-size:12px;color:var(--text-2);margin-top:1px}
+.sync-btn{display:flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--border-strong);border-radius:20px;background:var(--surface);color:var(--text-2);font-size:12px;cursor:pointer}
+.sync-btn:active{opacity:.7}
+.sync-btn i{font-size:14px}
+.syncing .sync-btn i{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* API CONFIG */
+.api-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem .75rem;margin-bottom:.5rem;display:flex;gap:6px;align-items:center}
+.api-bar input{flex:1;border:none;background:transparent;font-size:12px;color:var(--text);outline:none;font-family:monospace}
+.api-bar input::placeholder{color:var(--text-3)}
+.api-dot{width:8px;height:8px;border-radius:50%;background:var(--text-3);flex-shrink:0}
+.api-dot.ok{background:#22c55e}
+.api-dot.err{background:#ef4444}
+.save-url-btn{padding:4px 9px;border-radius:6px;border:1px solid var(--border-strong);background:transparent;color:var(--text-2);font-size:11px;cursor:pointer;white-space:nowrap}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:3px;gap:2px}
+.tab{flex:1;padding:7px 2px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-2);border-radius:9px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab i{font-size:17px}
+.tab.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* VIEWS */
+.view{display:none;padding:.75rem 1rem 0}
+.view.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1rem;margin-bottom:.75rem}
+.card-title{font-size:13px;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.card-title i{font-size:17px;color:var(--text-2)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:.75rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:.85rem .75rem;text-align:center}
+.stat-n{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.stat-l{font-size:11px;color:var(--text-2);margin-top:4px}
+
+/* FORM */
+label{font-size:12px;font-weight:500;color:var(--text-2);display:block;margin-bottom:4px;margin-top:.75rem}
+label:first-child{margin-top:0}
+input[type=text],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);font-size:14px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;-webkit-appearance:none}
+input[type=text]:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:none;height:64px;line-height:1.4}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;width:100%;margin-top:.6rem;border:1px solid var(--border-strong);background:transparent;color:var(--text);transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.success{background:#057a55;color:#fff;border-color:#057a55}
+.btn.danger{background:#9b1c1c;color:#fff;border-color:#9b1c1c}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge.pending{background:var(--warning-bg);color:var(--warning-text)}
+.badge.ready{background:var(--accent-bg);color:var(--accent-text)}
+.badge.shipped{background:var(--success-bg);color:var(--success-text)}
+.badge.voided{background:var(--void-bg);color:var(--void-text);text-decoration:line-through}
+
+/* ORDER ROWS */
+.order-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--border)}
+.order-row:last-child{border-bottom:none}
+.order-id{font-size:12px;font-family:monospace;color:var(--text);font-weight:500}
+.order-meta{font-size:11px;color:var(--text-2);margin-top:2px}
+.logi-tag{display:inline;font-size:10px;background:var(--void-bg);color:var(--void-text);padding:1px 5px;border-radius:10px;margin-left:4px}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--border-strong);border-radius:13px;padding:1.5rem 1rem;text-align:center;cursor:pointer;color:var(--text-2);transition:background .15s}
+.upload-zone:hover{background:var(--surface-2)}
+.upload-zone i{font-size:32px;display:block;margin-bottom:.5rem;color:var(--text-3)}
+
+/* FILTER ROW */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.75rem}
+.filter-chip{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-2)}
+.filter-chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1916;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+
+/* EMPTY */
+.empty{text-align:center;padding:2rem 1rem;color:var(--text-3);font-size:13px}
+.empty i{font-size:36px;display:block;margin-bottom:.5rem}
+
+/* VOID REASON PILLS */
+.reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:.5rem}
+.reason-pill{padding:8px;border-radius:var(--radius);border:1px solid var(--border-strong);background:transparent;color:var(--text-2);font-size:12px;cursor:pointer;text-align:center}
+.reason-pill.selected{background:var(--void-bg);color:var(--void-text);border-color:var(--void-border)}
+
+/* SCANNER */
+.scan-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;flex-direction:column;align-items:center;justify-content:center}
+.scan-modal.open{display:flex}
+.scan-box{width:min(90vw,360px);background:var(--surface);border-radius:16px;overflow:hidden}
+.scan-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1rem;border-bottom:1px solid var(--border)}
+.scan-header-title{font-size:14px;font-weight:600}
+.scan-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--surface-2);color:var(--text-2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+#qr-reader{width:100%}
+#qr-reader video{width:100%!important;border-radius:0!important}
+.scan-footer{padding:.75rem 1rem;font-size:12px;color:var(--text-2);text-align:center}
+.scan-footer span{color:var(--text-3)}
+.btn-scan{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-2);width:100%;margin-top:.5rem}
+.btn-scan:active{opacity:.7}
+.btn-scan.scanning{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title"><i class="ti ti-package" style="font-size:18px;vertical-align:-3px;margin-right:4px"></i>Pedidos ML</div>
+        <div class="header-sub" id="header-sub">Cargando...</div>
+      </div>
+      <button class="sync-btn" onclick="syncAll()" title="Sincronizar">
+        <i class="ti ti-refresh"></i> Sync
+      </button>
+    </div>
+
+    <!-- API URL -->
+    <div class="api-bar">
+      <div class="api-dot" id="api-dot"></div>
+      <input type="text" id="api-url" placeholder="Pegá la URL de tu Apps Script aquí..." value="">
+      <button class="save-url-btn" onclick="saveUrl()">Guardar</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('admin')" id="tab-admin">
+        <i class="ti ti-upload"></i>Admin
+      </div>
+      <div class="tab" onclick="switchTab('deposito')" id="tab-deposito">
+        <i class="ti ti-scan"></i>Depósito
+      </div>
+      <div class="tab" onclick="switchTab('logistica')" id="tab-logistica">
+        <i class="ti ti-truck"></i>Logística
+      </div>
+      <div class="tab" onclick="switchTab('panel')" id="tab-panel">
+        <i class="ti ti-list-check"></i>Panel
+      </div>
+      <div class="tab" onclick="switchTab('anuladas')" id="tab-anuladas">
+        <i class="ti ti-ban"></i>Anuladas
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== ADMIN ========== -->
+  <div class="view active" id="view-admin">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-file-spreadsheet"></i>Cargar CSV de Mercado Libre</div>
+      <div class="upload-zone" onclick="document.getElementById('csv-file').click()">
+        <i class="ti ti-table-import"></i>
+        <div style="font-size:13px;font-weight:500">Seleccioná el archivo CSV</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px">Exportado desde ML · columnas: nro_pedido, destinatario, logistica</div>
+      </div>
+      <input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="loadCSV(this)">
+    </div>
+
+    <div class="card" id="assign-block" style="display:none">
+      <div class="card-title"><i class="ti ti-truck"></i>Asignar logística</div>
+      <div id="assign-rows"></div>
+      <button class="btn primary" onclick="confirmAssign()"><i class="ti ti-cloud-upload"></i>Guardar en Sheets</button>
+    </div>
+  </div>
+
+  <!-- ========== DEPÓSITO ========== -->
+  <div class="view" id="view-deposito">
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="dep-pend" style="color:var(--warning)">—</div><div class="stat-l">Pendientes</div></div>
+      <div class="stat"><div class="stat-n" id="dep-listo" style="color:var(--success)">—</div><div class="stat-l">Preparados</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-scan"></i>Pedido preparado</div>
+      <label>Número de pedido</label>
+      <input type="text" id="dep-input" placeholder="Ej: 2000006831254978" inputmode="numeric" onkeydown="if(event.key==='Enter')markReady()">
+      <button class="btn-scan" id="btn-scan-dep" onclick="openScanner('dep')"><i class="ti ti-camera"></i>Escanear código de barras</button>
+      <button class="btn success" onclick="markReady()"><i class="ti ti-package-export"></i>Marcar como preparado</button>
+    </div>
+    <div id="dep-recent"></div>
+  </div>
+
+  <!-- ========== LOGÍSTICA ========== -->
+  <div class="view" id="view-logistica">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-building-warehouse"></i>Tu empresa</div>
+      <label>Seleccioná la logística</label>
+      <select id="logi-select" onchange="renderLogiRecent()">
+        <option value="">— Elegir —</option>
+        <option>Andreani</option>
+        <option>OCA</option>
+        <option>Correo Argentino</option>
+        <option>Mercado Envíos Flex</option>
+        <option>Pickit</option>
+        <option>Urbano</option>
+        <option>Otra</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-scan"></i>Pedido que retirás</div>
+      <label>Número de pedido</label>
+      <input type="text" id="logi-input" placeholder="Ej: 2000006831254978" inputmode="numeric" onkeydown="if(event.key==='Enter')markShipped()">
+      <button class="btn-scan" id="btn-scan-logi" onclick="openScanner('logi')"><i class="ti ti-camera"></i>Escanear código de barras</button>
+      <button class="btn primary" onclick="markShipped()"><i class="ti ti-truck-delivery"></i>Registrar retiro</button>
+    </div>
+    <div id="logi-recent"></div>
+  </div>
+
+  <!-- ========== PANEL ========== -->
+  <div class="view" id="view-panel">
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="pan-total">—</div><div class="stat-l">Total</div></div>
+      <div class="stat"><div class="stat-n" id="pan-pend" style="color:var(--warning)">—</div><div class="stat-l">Pendientes</div></div>
+      <div class="stat"><div class="stat-n" id="pan-ready" style="color:#1a56db">—</div><div class="stat-l">Preparados</div></div>
+      <div class="stat"><div class="stat-n" id="pan-ship" style="color:var(--success)">—</div><div class="stat-l">Retirados</div></div>
+    </div>
+    <div class="filter-row" id="pan-filters">
+      <button class="filter-chip active" onclick="setFilter('all',this)">Todos</button>
+      <button class="filter-chip" onclick="setFilter('pending',this)">Pendientes</button>
+      <button class="filter-chip" onclick="setFilter('ready',this)">Preparados</button>
+      <button class="filter-chip" onclick="setFilter('shipped',this)">Retirados</button>
+    </div>
+    <div id="pan-list"></div>
+    <button class="btn" onclick="exportCSV()" style="margin-top:.25rem"><i class="ti ti-download"></i>Exportar CSV</button>
+  </div>
+
+  <!-- ========== ANULADAS ========== -->
+  <div class="view" id="view-anuladas">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-ban"></i>Anular etiqueta</div>
+      <label>Número de pedido</label>
+      <input type="text" id="void-input" placeholder="Ej: 2000006831254978" inputmode="numeric">
+      <button class="btn-scan" id="btn-scan-void" onclick="openScanner('void')"><i class="ti ti-camera"></i>Escanear código de barras</button>
+      <label>Motivo</label>
+      <div class="reason-grid" id="reason-grid">
+        <button class="reason-pill" onclick="selectReason(this,'Sin stock')"><i class="ti ti-package-off" style="font-size:15px;display:block;margin-bottom:3px"></i>Sin stock</button>
+        <button class="reason-pill" onclick="selectReason(this,'Producto dañado')"><i class="ti ti-alert-triangle" style="font-size:15px;display:block;margin-bottom:3px"></i>Producto dañado</button>
+        <button class="reason-pill" onclick="selectReason(this,'Error de dirección')"><i class="ti ti-map-pin-off" style="font-size:15px;display:block;margin-bottom:3px"></i>Error de dirección</button>
+        <button class="reason-pill" onclick="selectReason(this,'Otro')"><i class="ti ti-dots" style="font-size:15px;display:block;margin-bottom:3px"></i>Otro</button>
+      </div>
+      <label>Notas adicionales (opcional)</label>
+      <textarea id="void-notes" placeholder="Descripción del problema..."></textarea>
+      <button class="btn danger" onclick="voidOrder()"><i class="ti ti-ban"></i>Confirmar anulación</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-list"></i>Historial de anuladas</div>
+      <div id="void-list"><div class="empty"><i class="ti ti-circle-check"></i>Sin anulaciones</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCANNER MODAL -->
+<div class="scan-modal" id="scan-modal">
+  <div class="scan-box">
+    <div class="scan-header">
+      <span class="scan-header-title"><i class="ti ti-scan" style="vertical-align:-2px;margin-right:5px"></i><span id="scan-modal-title">Escanear pedido</span></span>
+      <button class="scan-close" onclick="closeScanner()">×</button>
+    </div>
+    <div id="qr-reader"></div>
+    <div class="scan-footer">Apuntá la cámara al código de barras de la etiqueta<br><span>El número se completa automáticamente</span></div>
+  </div>
+</div>
+
+<script>
+// ---- STATE ----
+let orders = {};
+let apiUrl = localStorage.getItem('ml_api_url') || '';
+let panFilter = 'all';
+let selectedReason = '';
+let isSyncing = false;
+
+if(apiUrl) document.getElementById('api-url').value = apiUrl;
+
+// ---- DATE ----
+document.getElementById('header-sub').textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+
+// ---- TABS ----
+function switchTab(t){
+  ['admin','deposito','logistica','panel','anuladas'].forEach(id=>{
+    document.getElementById('tab-'+id).classList.toggle('active', id===t);
+    document.getElementById('view-'+id).classList.toggle('active', id===t);
+  });
+  if(t==='deposito') renderDeposito();
+  if(t==='logistica') renderLogiRecent();
+  if(t==='panel') renderPanel();
+  if(t==='anuladas') renderVoided();
+}
+
+// ---- API ----
+function saveUrl(){
+  apiUrl = document.getElementById('api-url').value.trim();
+  localStorage.setItem('ml_api_url', apiUrl);
+  toast('URL guardada');
+  pingApi();
+}
+
+async function pingApi(){
+  if(!apiUrl){setDot('');return;}
+  try{
+    const r = await fetch(apiUrl+'?action=ping');
+    const d = await r.json();
+    setDot(d.ok ? 'ok' : 'err');
+  }catch(e){setDot('err');}
+}
+
+function setDot(s){
+  const dot = document.getElementById('api-dot');
+  dot.className = 'api-dot' + (s?' '+s:'');
+}
+
+async function apiCall(action, body={}){
+  if(!apiUrl) throw new Error('Configurá la URL del script primero');
+  const method = action==='getAll' ? 'GET' : 'POST';
+  const url = action==='getAll' ? apiUrl+'?action=getAll' : apiUrl;
+  const opts = method==='GET' ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})};
+  const r = await fetch(url, opts);
+  return r.json();
+}
+
+async function syncAll(){
+  if(isSyncing) return;
+  isSyncing = true;
+  document.querySelector('.app').classList.add('syncing');
+  try{
+    const data = await apiCall('getAll');
+    orders = {};
+    (data.orders||[]).forEach(o=>{ orders[o.nro_pedido] = o; });
+    toast('Sincronizado · '+Object.keys(orders).length+' pedidos');
+    renderDeposito(); renderPanel(); renderVoided(); renderLogiRecent();
+  }catch(e){toast('Error: '+e.message);}
+  isSyncing = false;
+  document.querySelector('.app').classList.remove('syncing');
+}
+
+// ---- CSV ----
+function loadCSV(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const lines = e.target.result.trim().split('\n');
+    const pending = [];
+    lines.slice(1).forEach(line=>{
+      const cols = line.split(',').map(c=>c.replace(/"/g,'').trim());
+      const id = cols[0]; if(!id) return;
+      pending.push({nro_pedido:id, destinatario:cols[1]||'', logistica:cols[2]||''});
+    });
+    showAssignBlock(pending);
+    toast(pending.length+' pedidos cargados del CSV');
+  };
+  reader.readAsText(file,'UTF-8');
+  input.value='';
+}
+
+let pendingOrders = [];
+function showAssignBlock(list){
+  pendingOrders = list;
+  const block = document.getElementById('assign-block');
+  block.style.display = 'block';
+  const LOGIS = ['Andreani','OCA','Correo Argentino','Mercado Envíos Flex','Pickit','Urbano','Otra'];
+  const sample = list.slice(0,6);
+  document.getElementById('assign-rows').innerHTML = sample.map(o=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem">
+      <span style="flex:1;font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis">${o.nro_pedido}</span>
+      <select data-id="${o.nro_pedido}" style="font-size:12px;padding:5px 6px;width:auto;flex-shrink:0;margin:0">
+        <option value="">— Logi —</option>
+        ${LOGIS.map(l=>`<option value="${l}" ${o.logistica===l?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>`).join('') + (list.length>6 ? `<div style="font-size:11px;color:var(--text-3);margin-top:.35rem">...y ${list.length-6} pedidos más (se guardan con la logística del CSV)</div>` : '');
+}
+
+async function confirmAssign(){
+  document.querySelectorAll('[data-id]').forEach(sel=>{
+    const o = pendingOrders.find(p=>p.nro_pedido===sel.dataset.id);
+    if(o && sel.value) o.logistica = sel.value;
+  });
+  toast('Subiendo '+pendingOrders.length+' pedidos...');
+  let ok=0, err=0;
+  for(const o of pendingOrders){
+    try{
+      await apiCall('upsertOrder',{nro_pedido:o.nro_pedido, destinatario:o.destinatario, logistica:o.logistica});
+      orders[o.nro_pedido] = {nro_pedido:o.nro_pedido, destinatario:o.destinatario, logistica:o.logistica, estado:'pending', ...orders[o.nro_pedido]};
+      ok++;
+    }catch(e){err++;}
+  }
+  toast(ok+' guardados'+(err?' · '+err+' errores':''));
+  document.getElementById('assign-block').style.display='none';
+  renderPanel();
+}
+
+// ---- DEPÓSITO ----
+async function markReady(){
+  const inp = document.getElementById('dep-input');
+  const id = inp.value.trim();
+  if(!id){toast('Ingresá el número de pedido');return;}
+  try{
+    await apiCall('updateStatus',{nro_pedido:id, status:'ready'});
+    if(!orders[id]) orders[id]={nro_pedido:id,destinatario:'',logistica:'',estado:'ready'};
+    else orders[id].estado='ready';
+    toast('✓ Pedido '+id.slice(-6)+' preparado');
+    inp.value='';
+    renderDeposito();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+function renderDeposito(){
+  const all = Object.values(orders).filter(o=>o.estado!=='voided');
+  const pend = all.filter(o=>o.estado==='pending').length;
+  const listo = all.filter(o=>o.estado==='ready'||o.estado==='shipped').length;
+  document.getElementById('dep-pend').textContent = pend;
+  document.getElementById('dep-listo').textContent = listo;
+  const recent = all.filter(o=>o.estado==='ready').slice(-5).reverse();
+  document.getElementById('dep-recent').innerHTML = recent.length ? `
+    <div class="card">
+      <div class="card-title"><i class="ti ti-history"></i>Últimos preparados</div>
+      ${recent.map(o=>`<div class="order-row">
+        <div><div class="order-id">${o.nro_pedido}</div><div class="order-meta">${o.destinatario||'—'}</div></div>
+        <span class="badge ready">Listo</span>
+      </div>`).join('')}
+    </div>` : '';
+}
+
+// ---- LOGÍSTICA ----
+async function markShipped(){
+  const inp = document.getElementById('logi-input');
+  const logi = document.getElementById('logi-select').value;
+  const id = inp.value.trim();
+  if(!id){toast('Ingresá el número de pedido');return;}
+  if(!logi){toast('Seleccioná tu logística primero');return;}
+  try{
+    await apiCall('updateStatus',{nro_pedido:id, status:'shipped', logistica:logi});
+    if(!orders[id]) orders[id]={nro_pedido:id,destinatario:'',logistica:logi,estado:'shipped'};
+    else{orders[id].estado='shipped';orders[id].logistica=logi;}
+    toast('✓ Retirado por '+logi);
+    inp.value='';
+    renderLogiRecent();
+    renderPanel();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+function renderLogiRecent(){
+  const logi = document.getElementById('logi-select').value;
+  const recent = Object.values(orders).filter(o=>o.estado==='shipped'&&o.logistica===logi).slice(-5).reverse();
+  document.getElementById('logi-recent').innerHTML = logi && recent.length ? `
+    <div class="card">
+      <div class="card-title"><i class="ti ti-history"></i>Retirados por ${logi}</div>
+      ${recent.map(o=>`<div class="order-row">
+        <div><div class="order-id">${o.nro_pedido}</div><div class="order-meta">${o.destinatario||'—'}</div></div>
+        <span class="badge shipped">Retirado</span>
+      </div>`).join('')}
+    </div>` : '';
+}
+
+// ---- PANEL ----
+function setFilter(f, btn){
+  panFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPanel();
+}
+
+function renderPanel(){
+  const all = Object.values(orders).filter(o=>o.estado!=='voided');
+  document.getElementById('pan-total').textContent = all.length;
+  document.getElementById('pan-pend').textContent = all.filter(o=>o.estado==='pending').length;
+  document.getElementById('pan-ready').textContent = all.filter(o=>o.estado==='ready').length;
+  document.getElementById('pan-ship').textContent = all.filter(o=>o.estado==='shipped').length;
+  const shown = all.filter(o=>panFilter==='all'||o.estado===panFilter);
+  const statusLabel = {pending:'Pendiente',ready:'Preparado',shipped:'Retirado'};
+  document.getElementById('pan-list').innerHTML = shown.length ?
+    `<div class="card">${shown.map(o=>`<div class="order-row">
+      <div>
+        <div class="order-id">${o.nro_pedido}</div>
+        <div class="order-meta">${o.destinatario||'—'}${o.logistica?`<span class="logi-tag">${o.logistica}</span>`:''}</div>
+      </div>
+      <span class="badge ${o.estado}">${statusLabel[o.estado]||o.estado}</span>
+    </div>`).join('')}</div>` :
+    `<div class="empty"><i class="ti ti-mood-happy"></i>Sin pedidos en este estado</div>`;
+}
+
+function exportCSV(){
+  const all = Object.values(orders);
+  const rows=[['nro_pedido','destinatario','logistica','estado','motivo_anulacion','ts_carga','ts_preparado','ts_retirado','ts_anulado','notas']];
+  all.forEach(o=>rows.push([o.nro_pedido,o.destinatario||'',o.logistica||'',o.estado||'',o.motivo_anulacion||'',o.ts_carga||'',o.ts_preparado||'',o.ts_retirado||'',o.ts_anulado||'',o.notas||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='pedidos_ml_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV exportado');
+}
+
+// ---- ANULADAS ----
+function selectReason(btn, reason){
+  selectedReason = reason;
+  document.querySelectorAll('.reason-pill').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+async function voidOrder(){
+  const id = document.getElementById('void-input').value.trim();
+  const notas = document.getElementById('void-notes').value.trim();
+  if(!id){toast('Ingresá el número de pedido');return;}
+  if(!selectedReason){toast('Seleccioná un motivo');return;}
+  try{
+    await apiCall('voidOrder',{nro_pedido:id, motivo:selectedReason, notas});
+    if(!orders[id]) orders[id]={nro_pedido:id,destinatario:'',logistica:'',estado:'voided',motivo_anulacion:selectedReason,notas};
+    else{orders[id].estado='voided';orders[id].motivo_anulacion=selectedReason;orders[id].notas=notas;}
+    toast('Etiqueta '+id.slice(-6)+' anulada — '+selectedReason);
+    document.getElementById('void-input').value='';
+    document.getElementById('void-notes').value='';
+    document.querySelectorAll('.reason-pill').forEach(b=>b.classList.remove('selected'));
+    selectedReason='';
+    renderVoided();
+    renderPanel();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+function renderVoided(){
+  const voided = Object.values(orders).filter(o=>o.estado==='voided');
+  const ICONS = {'Sin stock':'ti-package-off','Producto dañado':'ti-alert-triangle','Error de dirección':'ti-map-pin-off','Otro':'ti-dots'};
+  document.getElementById('void-list').innerHTML = voided.length ?
+    voided.map(o=>`<div class="order-row">
+      <div>
+        <div class="order-id">${o.nro_pedido}</div>
+        <div class="order-meta">
+          <i class="ti ${ICONS[o.motivo_anulacion]||'ti-ban'}" style="font-size:11px;vertical-align:-1px;margin-right:2px"></i>${o.motivo_anulacion||'Sin motivo'}${o.notas?' · '+o.notas:''}
+        </div>
+      </div>
+      <span class="badge voided">Anulada</span>
+    </div>`).join('') :
+    '<div class="empty"><i class="ti ti-circle-check"></i>Sin anulaciones registradas</div>';
+}
+
+// ---- SCANNER ----
+let scannerInstance = null;
+let scanTarget = null; // 'dep' | 'logi' | 'void'
+
+function openScanner(target){
+  scanTarget = target;
+  const titles = {dep:'Depósito — escanear preparado', logi:'Logística — escanear retiro', void:'Anuladas — escanear etiqueta'};
+  document.getElementById('scan-modal-title').textContent = titles[target] || 'Escanear pedido';
+  document.getElementById('scan-modal').classList.add('open');
+
+  // Highlight active btn
+  ['dep','logi','void'].forEach(t=>{
+    const b = document.getElementById('btn-scan-'+t);
+    if(b) b.classList.toggle('scanning', t===target);
+  });
+
+  if(scannerInstance) { startCamera(); return; }
+
+  scannerInstance = new Html5Qrcode('qr-reader');
+  startCamera();
+}
+
+function startCamera(){
+  scannerInstance.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 260, height: 120 }, aspectRatio: 1.4,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.QR_CODE,
+      ]
+    },
+    onScanSuccess,
+    ()=>{}
+  ).catch(err=>{
+    toast('Cámara no disponible: '+err);
+    closeScanner();
+  });
+}
+
+function onScanSuccess(decodedText){
+  // ML order numbers are numeric strings — extract the numeric portion
+  const num = decodedText.replace(/\D/g,'').trim() || decodedText.trim();
+  const inputMap = {dep:'dep-input', logi:'logi-input', void:'void-input'};
+  const inp = document.getElementById(inputMap[scanTarget]);
+  if(inp){
+    inp.value = num;
+    inp.focus();
+  }
+  // Vibrate for feedback
+  if(navigator.vibrate) navigator.vibrate([80,40,80]);
+  toast('✓ Código leído: ...'+num.slice(-6));
+  closeScanner();
+
+  // Auto-submit for dep and logi to speed up workflow
+  if(scanTarget==='dep') setTimeout(markReady, 350);
+  if(scanTarget==='logi'){
+    const logi = document.getElementById('logi-select').value;
+    if(logi) setTimeout(markShipped, 350);
+    else toast('Seleccioná la logística y confirmá');
+  }
+}
+
+function closeScanner(){
+  document.getElementById('scan-modal').classList.remove('open');
+  ['dep','logi','void'].forEach(t=>{
+    const b = document.getElementById('btn-scan-'+t);
+    if(b) b.classList.remove('scanning');
+  });
+  if(scannerInstance){
+    scannerInstance.stop().catch(()=>{});
+  }
+}
+
+// Close on backdrop click
+document.getElementById('scan-modal').addEventListener('click', function(e){
+  if(e.target === this) closeScanner();
+});
+
+// ---- TOAST ----
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ---- INIT ----
+pingApi();
+if(apiUrl) syncAll();
+</script>
+</body>
+</html>
