@@ -350,13 +350,25 @@ function saveUrl(){
   pingApi();
 }
 
+// JSONP helper — sortea CORS en Apps Script publicado con acceso "Cualquier persona"
+function callJsonp(url){
+  return new Promise((resolve, reject)=>{
+    const fn = '_gs_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    window[fn] = data => { resolve(data); try{delete window[fn];}catch(e){} script.remove(); };
+    const script = document.createElement('script');
+    script.src = url + (url.includes('?')?'&':'?') + 'callback='+fn;
+    script.onerror = ()=>{ reject(new Error('Error de red')); try{delete window[fn];}catch(e){} script.remove(); };
+    document.head.appendChild(script);
+    setTimeout(()=>{ if(window[fn]){ reject(new Error('Sin respuesta (timeout)')); try{delete window[fn];}catch(e){} script.remove(); } }, 10000);
+  });
+}
+
 async function pingApi(){
   if(!apiUrl){setDot('');return;}
   try{
-    const r = await fetch(apiUrl+'?action=ping');
-    const d = await r.json();
-    setDot(d.ok ? 'ok' : 'err');
-  }catch(e){setDot('err');}
+    const d = await callJsonp(apiUrl+'?action=ping');
+    setDot(d && d.ok ? 'ok' : 'err');
+  }catch(e){ setDot('err'); }
 }
 
 function setDot(s){
@@ -366,11 +378,9 @@ function setDot(s){
 
 async function apiCall(action, body={}){
   if(!apiUrl) throw new Error('Configurá la URL del script primero');
-  const method = action==='getAll' ? 'GET' : 'POST';
-  const url = action==='getAll' ? apiUrl+'?action=getAll' : apiUrl;
-  const opts = method==='GET' ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})};
-  const r = await fetch(url, opts);
-  return r.json();
+  let url = apiUrl + '?action=' + encodeURIComponent(action);
+  if(Object.keys(body).length) url += '&data=' + encodeURIComponent(JSON.stringify(body));
+  return callJsonp(url);
 }
 
 async function syncAll(){
